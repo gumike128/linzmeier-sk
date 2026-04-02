@@ -1,0 +1,305 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ═══ AUTH & RBAC ═══
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  passwordHash  String?
+  role          String    @default("PARTNER")
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  avatarUrl     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  assignedLeads   Lead[]     @relation("AssignedTo")
+  notes           Note[]
+  activities      Activity[]
+  aiInteractions  AIInteraction[]
+  contentVersions ContentVersion[]
+  auditLogs       AuditLog[]
+  clientModules   ClientModule[] @relation("ClientModules")
+
+  @@map("users")
+}
+
+// ═══ CRM ═══
+
+model Lead {
+  id            String    @id @default(cuid())
+  customerType  String
+  name          String
+  email         String
+  phone         String?
+  company       String?
+  projectType   String?
+  message       String
+  projectArea   Float?
+  budget        String?
+  source        String    @default("web_form")
+  status        String    @default("NEW")
+  priority      String    @default("normal")
+  assignedToId  String?
+  assignedTo    User?     @relation("AssignedTo", fields: [assignedToId], references: [id])
+  score         Int?
+  scoreDetails  String?
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  utmContent    String?
+  reminderAt     DateTime?
+  ipAddress     String?
+  userAgent     String?
+  readAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  notes         Note[]
+  activities    Activity[]
+
+  @@map("leads")
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  content   String
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notes")
+}
+
+model Activity {
+  id          String    @id @default(cuid())
+  type        String
+  description String
+  metadata    String?
+  leadId      String?
+  lead        Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  createdAt   DateTime  @default(now())
+
+  @@map("activities")
+}
+
+// ═══ CMS ═══
+
+model Product {
+  id              String    @id @default(cuid())
+  slug            String    @unique
+  name            String
+  shortDesc       String?
+  description     String?
+  category        String
+  specs           String?
+  benefits        String?
+  metaTitle       String?
+  metaDescription String?
+  status          String    @default("DRAFT")
+  sortOrder       Int       @default(0)
+  imageUrl        String?
+  galleryImages   String?
+  suitableFor     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  versions        ContentVersion[]
+
+  @@map("products")
+}
+
+model BlogPost {
+  id              String    @id @default(cuid())
+  slug            String    @unique
+  title           String
+  content         String?
+  excerpt         String?
+  coverImage      String?
+  category        String?
+  tags            String?
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String?
+  status          String    @default("DRAFT")
+  publishedAt     DateTime?
+  scheduledAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  versions        ContentVersion[]
+
+  @@map("blog_posts")
+}
+
+model Reference {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  type          String
+  location      String
+  system        String?
+  coverImage    String?
+  tags          String?
+  status        String    @default("DRAFT")
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("references")
+}
+
+model Document {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  category      String
+  fileType      String
+  fileSize      Int?
+  fileUrl       String
+  sortOrder     Int       @default(0)
+  isPublic      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("documents")
+}
+
+// ═══ AI LOGGING ═══
+
+model AIInteraction {
+  id          String   @id @default(cuid())
+  type        String
+  input       String
+  output      String?
+  model       String
+  tokensUsed  Int?
+  durationMs  Int?
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  metadata    String?
+  createdAt   DateTime @default(now())
+
+  @@map("ai_interactions")
+}
+
+// ═══ CONTENT VERSIONING ═══
+
+model ContentVersion {
+  id          String   @id @default(cuid())
+  entityType  String   // 'product' or 'blog_post'
+  entityId    String
+  data        String   // JSON snapshot
+  version     Int      @default(1)
+  changeNote  String?
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  product     Product? @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  blogPost    BlogPost? @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@map("content_versions")
+}
+
+// ═══ AUTOMATIONS ═══
+
+model Automation {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  trigger     String   // status_change | lead_created
+  conditions  String   // JSON: {"fromStatus":"NEW","toStatus":"CONTACTED"}
+  actions      String   // JSON: [{"type":"email","template":"..."},{"type":"assign","strategy":"round_robin"}]
+  isActive     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+ updatedAt   DateTime @updatedAt
+
+  @@map("automations")
+}
+
+// ═══ AUDIT LOG ═══
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String
+  action      String
+  entityType  String   // 'lead', 'product', 'blog_post', 'reference', 'document', 'user', 'automation', 'setting'
+  entityId    String?
+  details     String?  // JSON with changed fields
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ═══ SETTINGS ═══
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+  type  String @default("string")
+
+  @@map("settings")
+}
+
+// ═══ MARKETPLACE & MODULES ═══
+
+model Module {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  longDescription String?   // Markdown with benefits, features
+  category    String   @default("core") // core, crm, cms, ai, analytics, integration
+  icon        String   @default("Package") // Lucide icon name
+  price       Float    @default(0)   // 0 = free
+  priceLabel  String   @default("")  // e.g. "€49/mesiac"
+  sortOrder   Int      @default(0)
+  isVisible   Boolean  @default(true)
+  isFree      Boolean  @default(false)
+  trialDays   Int      @default(0)   // 0 = no trial
+  linkedMenuItems String?  // JSON: menu item IDs that this module gates
+  features    String?  // JSON: list of feature descriptions
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  clientModules ClientModule[]
+
+  @@map("modules")
+}
+
+model ClientModule {
+  id           String   @id @default(cuid())
+  clientId     String   // User ID of the client (ADMIN of the instance)
+  moduleId     String
+  status       String   @default("active") // active, trial, inactive, expired
+  activatedAt  DateTime @default(now())
+  expiresAt    DateTime?
+  note         String?  // Superadmin note
+  activatedBy  String?  // User ID who activated it
+
+  client       User     @relation("ClientModules", fields: [clientId], references: [id])
+  module       Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, moduleId])
+  @@map("client_modules")
+}
