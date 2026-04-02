@@ -91,9 +91,9 @@
   --brand-light: oklch(0.55 0.06 260);
   --brand-dark: oklch(0.20 0.04 260);
   --brand-foreground: oklch(0.98 0.002 80);
-  --warm: oklch(0.93 0.19 95);
-  --warm-light: oklch(0.96 0.08 92);
-  --warm-dark: oklch(0.48 0.18 78);
+  --warm: oklch(0.93 0.20 104);
+  --warm-light: oklch(0.99 0.04 104);
+  --warm-dark: oklch(0.86 0.18 103);
   --eco: oklch(0.52 0.12 150);
   --eco-light: oklch(0.88 0.06 150);
 }
@@ -134,9 +134,9 @@
   --brand-light: oklch(0.65 0.06 260);
   --brand-dark: oklch(0.35 0.04 260);
   --brand-foreground: oklch(0.98 0.002 80);
-  --warm: oklch(0.90 0.18 92);
-  --warm-light: oklch(0.96 0.08 92);
-  --warm-dark: oklch(0.65 0.18 85);
+  --warm: oklch(0.93 0.20 104);
+  --warm-light: oklch(0.99 0.04 104);
+  --warm-dark: oklch(0.86 0.18 103);
   --eco: oklch(0.58 0.12 150);
   --eco-light: oklch(0.78 0.06 150);
 }
